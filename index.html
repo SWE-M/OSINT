@@ -3,130 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>World Monitor - Command Center</title>
+    <title>OSINT Command Center - Live</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #000;
-            color: #fff;
-            overflow: hidden;
-        }
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
 
-        /* 1. الخريطة (خلفية الشاشة بالكامل) */
-        #map {
-            width: 100%;
-            height: calc(100% - 40px); /* ترك مساحة لشريط الأخبار بالأسفل */
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
+        /* الخريطة */
+        #map { width: 100%; height: calc(100% - 45px); position: absolute; z-index: 1; }
 
-        /* 2. مربع البث المباشر (عائم فوق الخريطة) */
+        /* البث المباشر (الجزيرة) */
         #live-tv-box {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 350px;
-            height: 200px;
-            background-color: rgba(0, 0, 0, 0.8);
-            border: 2px solid #cc0000;
-            border-radius: 8px;
-            z-index: 1000;
-            box-shadow: 0 0 15px rgba(204, 0, 0, 0.5);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            position: absolute; top: 15px; left: 15px; width: 320px; height: 190px;
+            background: rgba(0,0,0,0.8); border: 1px solid #c00; border-radius: 5px; z-index: 1000;
+            box-shadow: 0 0 10px rgba(204,0,0,0.3); overflow: hidden; display: flex; flex-direction: column;
         }
+        .tv-header { background: #c00; padding: 5px 10px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; }
+        .live-indicator { animation: blink 1s infinite; color: #fff; }
 
-        .tv-header {
-            background-color: #cc0000;
-            color: white;
-            padding: 5px 10px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
+        /* دليل التعليمات (Legend) */
+        #legend-box {
+            position: absolute; top: 15px; right: 15px; width: 250px;
+            background: rgba(15, 15, 15, 0.9); border: 1px solid #444; border-radius: 5px; z-index: 1000;
+            padding: 15px; box-shadow: 0 0 15px rgba(0,0,0,0.7); backdrop-filter: blur(5px);
         }
+        #legend-box h3 { margin: 0 0 10px 0; font-size: 14px; color: #ffcc00; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; color: #ccc; }
+        .legend-icon { width: 20px; text-align: center; margin-left: 10px; font-size: 14px; }
 
-        .tv-header span.live-indicator {
-            animation: blink 1s infinite;
-        }
-
-        /* 3. شريط الأخبار العاجلة (ثابت في الأسفل) */
+        /* شريط الأخبار */
         #news-ticker {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 40px;
-            background-color: #111;
-            border-top: 2px solid #cc0000;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            overflow: hidden;
+            position: absolute; bottom: 0; width: 100%; height: 45px;
+            background: #111; border-top: 2px solid #c00; z-index: 1000; display: flex; align-items: center;
         }
+        .ticker-title { background: #c00; padding: 0 20px; height: 100%; display: flex; align-items: center; font-weight: bold; z-index: 2; }
+        .ticker-content { flex-grow: 1; overflow: hidden; position: relative; white-space: nowrap; }
+        .scrolling-text { display: inline-block; padding-left: 100%; animation: scroll-left 40s linear infinite; color: #fff; font-size: 15px; }
+        .news-source { color: #ffcc00; font-weight: bold; margin-left: 5px; }
 
-        .ticker-title {
-            background-color: #cc0000;
-            color: white;
-            padding: 0 20px;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            font-weight: bold;
-            white-space: nowrap;
-            z-index: 2;
-        }
+        /* الأيقونات المتحركة على الخريطة */
+        .strike-icon { color: #ff3333; font-size: 24px; animation: pulse 1s infinite; text-shadow: 0 0 10px #f00; }
+        .plane-icon { color: #00ccff; font-size: 16px; transition: transform 0.5s; text-shadow: 0 0 5px #00ccff; }
 
-        .ticker-content {
-            flex-grow: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .scrolling-text {
-            display: inline-block;
-            padding-left: 100%;
-            animation: scroll-left 25s linear infinite;
-            color: #ffcc00;
-            font-size: 1.1rem;
-        }
-
-        /* حركات الأنيميشن */
-        @keyframes scroll-left {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(100%, 0); }
-        }
-
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0; }
-            100% { opacity: 1; }
-        }
-
-        /* أيقونات الخريطة */
-        .combat-icon {
-            background-color: #cc0000;
-            border-radius: 50%;
-            border: 2px solid #fff;
-            box-shadow: 0 0 10px #cc0000;
-        }
-        
-        .ship-icon {
-            background-color: #0066cc;
-            border-radius: 0;
-            border: 2px solid #fff;
-        }
+        @keyframes scroll-left { 0% { transform: translate(0, 0); } 100% { transform: translate(100%, 0); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
@@ -135,39 +60,166 @@
 
     <div id="live-tv-box">
         <div class="tv-header">
-            <span>الجزيرة - بث مباشر</span>
-            <span class="live-indicator">🔴 LIVE</span>
+            <span>الجزيرة | Al Jazeera Live</span>
+            <span class="live-indicator">● LIVE</span>
         </div>
-        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/bWeEQAUKKik?autoplay=1&mute=1" title="Live TV" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/bWeEQAUKKik?autoplay=1&mute=1" frameborder="0" allowfullscreen></iframe>
+    </div>
+
+    <div id="legend-box">
+        <h3><i class="fas fa-satellite-dish"></i> دليل غرفة العمليات</h3>
+        <div class="legend-item">
+            <div class="legend-icon" style="color: #00ccff;"><i class="fas fa-plane"></i></div>
+            <span>رصد حي ومباشر لحركة الطيران المدني والعسكري المرخص في الأجواء.</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-icon strike-icon"><i class="fas fa-bullseye"></i></div>
+            <span>تحليل آلي لمواقع الأحداث: نقطة حمراء تظهر عند ورود خبر قصف أو اشتباك في منطقة معينة.</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-icon" style="color: #ffcc00;"><i class="fas fa-bolt"></i></div>
+            <span>الشريط السفلي: أخبار عاجلة حقيقية تُسحب برمجياً كل 3 دقائق.</span>
+        </div>
     </div>
 
     <div id="news-ticker">
-        <div class="ticker-title">عاجل ⚡</div>
+        <div class="ticker-title">غرفة الأخبار ⚡</div>
         <div class="ticker-content">
-            <div class="scrolling-text">
-                أحدث التطورات: اعتراض أهداف جوية في سماء المنطقة ... | ... استمرار التشويش على أنظمة الملاحة وتوجيه السفن ... | ... تحركات لقطع بحرية في مياه الخليج وتفعيل منصات الدفاع الجوي.
+            <div class="scrolling-text" id="ticker-text">
+                جاري الاتصال بالأقمار الصناعية وسحب البيانات الحية...
             </div>
         </div>
     </div>
 
     <script>
-        // إعداد الخريطة
-        const map = L.map('map', {zoomControl: false}).setView([26.0, 51.0], 5);
-        L.control.zoom({ position: 'bottomleft' }).addTo(map);
+        // 1. إعداد الخريطة المظلمة ومركزها (الشرق الأوسط)
+        const map = L.map('map', {zoomControl: false}).setView([27.0, 50.0], 5);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
 
-        // طبقة الخريطة المظلمة
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19
-        }).addTo(map);
+        // 2. إعداد قاعدة بيانات المواقع (Mini-Dictionary) لتحليل الأخبار وتحويلها لإحداثيات
+        // 2. قاعدة بيانات استخباراتية موسعة (الكلمات المفتاحية والإحداثيات)
+        const locationDB = [
+            // ====== دول الخليج والقواعد والمطارات ======
+            { keywords: ["الرياض", "السعودية", "مطار الملك خالد", "الدمام"], lat: 24.7136, lng: 46.6753 },
+            { keywords: ["جدة", "ينبع", "أرامكو"], lat: 21.4858, lng: 39.1925 },
+            { keywords: ["أبوظبي", "الامارات", "الإمارات", "قاعدة الظفرة"], lat: 24.4539, lng: 54.3773 },
+            { keywords: ["دبي", "مطار دبي", "جبل علي"], lat: 25.2048, lng: 55.2708 },
+            { keywords: ["الدوحة", "قطر", "قاعدة العديد", "العديد", "مطار حمد"], lat: 25.2854, lng: 51.5310 },
+            { keywords: ["الرويس", "راس لفان", "الشمال"], lat: 26.13, lng: 51.20 },
+            { keywords: ["الكويت", "معسكر عريفجان", "قاعدة علي السالم"], lat: 29.3759, lng: 47.9774 },
+            { keywords: ["البحرين", "المنامة", "الأسطول الخامس"], lat: 26.2285, lng: 50.5860 },
+            { keywords: ["مسقط", "عمان", "سلطنة عمان"], lat: 23.5859, lng: 58.4059 },
 
-        // تخصيص الأيقونات (واحدة للقصف/الاشتباك، وواحدة للقطع البحرية)
-        const combatMarker = L.divIcon({ className: 'combat-icon', iconSize: [15, 15] });
-        const shipMarker = L.divIcon({ className: 'ship-icon', iconSize: [12, 12] });
+            // ====== إيران والمواقع الاستراتيجية ======
+            { keywords: ["طهران", "ايران", "إيران", "الحرس الثوري", "خامنئي"], lat: 35.6892, lng: 51.3890 },
+            { keywords: ["أصفهان", "اصفهان", "نطنز", "منشأة نووية"], lat: 32.6539, lng: 51.6660 },
+            { keywords: ["مضيق هرمز", "بندر عباس", "جزيرة خرج", "بوشهر"], lat: 26.5000, lng: 56.2500 },
 
-        // إضافة نقاط محاكاة على الخريطة
-        L.marker([29.5, 52.5], {icon: combatMarker}).addTo(map).bindPopup("<b>منصة إطلاق صواريخ</b><br>تم رصد نشاط قبل قليل");
-        L.marker([25.2, 55.3], {icon: combatMarker}).addTo(map).bindPopup("<b>منظومة دفاع جوي</b><br>في وضع الاستعداد القصوى");
-        L.marker([26.5, 53.0], {icon: shipMarker}).addTo(map).bindPopup("<b>بارجة عسكرية</b><br>تتحرك في المياه الدولية");
+            // ====== بؤر الصراع (الشام والعراق) ======
+            { keywords: ["تل ابيب", "اسرائيل", "إسرائيل", "مطار بن غوريون", "حيفا"], lat: 32.0853, lng: 34.7818 },
+            { keywords: ["القدس", "الكنيست", "نتنياهو"], lat: 31.7683, lng: 35.2137 },
+            { keywords: ["بيروت", "لبنان", "الضاحية", "مطار رفيق الحريري"], lat: 33.8938, lng: 35.5018 },
+            { keywords: ["جنوب لبنان", "صور", "النبطية", "حزب الله"], lat: 33.2705, lng: 35.2038 },
+            { keywords: ["بغداد", "العراق", "المنطقة الخضراء", "قاعدة عين الأسد"], lat: 33.3152, lng: 44.3661 },
+            { keywords: ["أربيل", "كردستان", "مطار أربيل"], lat: 36.1901, lng: 44.0092 },
+            { keywords: ["دمشق", "سوريا", "الجولان"], lat: 33.5138, lng: 36.2765 },
+            { keywords: ["عمان", "الأردن", "العقبة"], lat: 31.9454, lng: 35.9284 },
+
+            // ====== البحر الأحمر واليمن ======
+            { keywords: ["صنعاء", "اليمن", "حوثي", "الحوثيين"], lat: 15.3694, lng: 44.1910 },
+            { keywords: ["الحديدة", "باب المندب", "البحر الأحمر", "سفينة تجارية"], lat: 14.7978, lng: 42.9545 },
+
+            // ====== أمريكا ومراكز القرار ======
+            { keywords: ["واشنطن", "أمريكا", "الولايات المتحدة", "البيت الأبيض", "البنتاغون"], lat: 38.8951, lng: -77.0364 },
+            
+            // ====== مصر ======
+            { keywords: ["القاهرة", "مصر", "قناة السويس", "سيناء"], lat: 30.0444, lng: 31.2357 }
+        ];
+
+        // 3. دالة سحب الأخبار الحقيقية ورسم مواقعها
+        async function fetchLiveNews() {
+            // نستخدم RSS لقناة إخبارية لتحويله إلى JSON
+            const rssUrls = [
+                'https://api.rss2json.com/v1/api.json?rss_url=https://www.skynewsarabia.com/rss'
+            ];
+            
+            try {
+                const response = await fetch(rssUrls[0]);
+                const data = await response.json();
+                
+                if(data.status === 'ok') {
+                    let newsHtml = "";
+                    const articles = data.items.slice(0, 15);
+                    
+                    articles.forEach(article => {
+                        newsHtml += `<span class="news-source">[عاجل]</span> ${article.title} &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; `;
+                        
+                        // هنا السحر: الذكاء الاصطناعي المبسط (NLP) يبحث عن أسماء المدن في الخبر
+                        locationDB.forEach(loc => {
+                            loc.keywords.forEach(keyword => {
+                                if(article.title.includes(keyword)) {
+                                    // إذا وجد اسم المدينة في الخبر العاجل، يرسم نقطة حمراء فوراً!
+                                    const strikeIcon = L.divIcon({ html: '<i class="fas fa-bullseye"></i>', className: 'strike-icon', iconSize: [24, 24] });
+                                    L.marker([loc.lat, loc.lng], {icon: strikeIcon})
+                                     .addTo(map)
+                                     .bindPopup(`<b style="color:red;">رصد حدث مباشر</b><br>${article.title}`);
+                                }
+                            });
+                        });
+                    });
+                    
+                    document.getElementById('ticker-text').innerHTML = newsHtml;
+                }
+            } catch (e) { console.log("خطأ في جلب الأخبار", e); }
+        }
+
+        // 4. دالة سحب الطيران الحقيقي المباشر (Flight Radar API)
+        let flightMarkers = [];
+        async function fetchRealFlights() {
+            // مربع الإحداثيات للشرق الأوسط
+            const api = 'https://opensky-network.org/api/states/all?lamin=12.0&lomin=34.0&lamax=38.0&lomax=60.0';
+            try {
+                const res = await fetch(api);
+                const data = await res.json();
+                
+                // مسح الطائرات القديمة لتحديث أماكنها
+                flightMarkers.forEach(m => map.removeLayer(m));
+                flightMarkers = [];
+
+                if(data.states) {
+                    // أخذ 30 طائرة فقط لتخفيف الضغط على المتصفح
+                    const flights = data.states.slice(0, 30);
+                    flights.forEach(flight => {
+                        const lng = flight[5];
+                        const lat = flight[6];
+                        const angle = flight[10] || 0; // زاوية دوران الطائرة الحقيقية
+                        const callsign = flight[1] || "مجهول";
+                        
+                        // تدوير أيقونة الطائرة بناءً على اتجاهها الحقيقي في السماء!
+                        const planeIcon = L.divIcon({
+                            html: `<div style="transform: rotate(${angle - 45}deg);"><i class="fas fa-plane"></i></div>`,
+                            className: 'plane-icon',
+                            iconSize: [20, 20]
+                        });
+
+                        const marker = L.marker([lat, lng], {icon: planeIcon})
+                                        .addTo(map)
+                                        .bindPopup(`<b>رقم الرحلة:</b> ${callsign}<br><b>الارتفاع:</b> ${flight[7]} متر`);
+                        flightMarkers.push(marker);
+                    });
+                }
+            } catch(e) { console.log("خطأ في جلب الرادار", e); }
+        }
+
+        // تشغيل الوظائف عند فتح الصفحة
+        fetchLiveNews();
+        fetchRealFlights();
+
+        // تحديث الأخبار كل 3 دقائق
+        setInterval(fetchLiveNews, 180000);
+        // تحديث حركة الطائرات كل دقيقة
+        setInterval(fetchRealFlights, 60000);
 
     </script>
 </body>
