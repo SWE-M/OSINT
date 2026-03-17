@@ -10,65 +10,43 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <style>
-        /* الإعدادات الأساسية للصفحة */
         body, html { margin: 0; padding: 0; height: 100%; background: #000; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; }
-        
-        /* الخريطة */
         #map { width: 100%; height: calc(100% - 45px); position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* مربع البث المباشر (قناة الجزيرة) */
+        /* مربع البث المباشر (أصبح قابلاً للتصغير والتكبير) */
         #live-tv-box {
             position: absolute; top: 15px; left: 15px; width: 320px; height: 190px;
+            min-width: 250px; min-height: 150px; max-width: 800px; max-height: 600px;
             background: rgba(0,0,0,0.8); border: 1px solid #c00; border-radius: 5px; z-index: 1000;
-            box-shadow: 0 0 10px rgba(204,0,0,0.3); overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 0 10px rgba(204,0,0,0.3); display: flex; flex-direction: column;
+            resize: both; overflow: hidden; /* السر هنا لتكبير وتصغير المربع */
         }
-        .tv-header { background: #c00; padding: 5px 10px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; }
+        .tv-header { background: #c00; padding: 5px 10px; font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; cursor: move; }
         .live-indicator { animation: blink 1s infinite; color: #fff; }
+        /* حل مشكلة تعليق الماوس عند تصغير إطار اليوتيوب */
+        #live-tv-box iframe { flex-grow: 1; pointer-events: auto; }
 
-        /* صندوق دليل التعليمات */
-        #legend-box {
-            position: absolute; top: 15px; right: 15px; width: 250px;
-            background: rgba(15, 15, 15, 0.9); border: 1px solid #444; border-radius: 5px; z-index: 1000;
-            padding: 15px; box-shadow: 0 0 15px rgba(0,0,0,0.7); backdrop-filter: blur(5px);
-        }
+        #legend-box { position: absolute; top: 15px; right: 15px; width: 250px; background: rgba(15, 15, 15, 0.9); border: 1px solid #444; border-radius: 5px; z-index: 1000; padding: 15px; box-shadow: 0 0 15px rgba(0,0,0,0.7); backdrop-filter: blur(5px); }
         #legend-box h3 { margin: 0 0 10px 0; font-size: 14px; color: #ffcc00; border-bottom: 1px solid #333; padding-bottom: 5px; }
         .legend-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; color: #ccc; }
         .legend-icon { width: 20px; text-align: center; margin-left: 10px; font-size: 14px; }
 
-        /* شريط الأخبار السفلي المتحرك */
-        #news-ticker {
-            position: absolute; bottom: 0; width: 100%; height: 45px;
-            background: #111; border-top: 2px solid #c00; z-index: 1000; display: flex; align-items: center;
-        }
+        #news-ticker { position: absolute; bottom: 0; width: 100%; height: 45px; background: #111; border-top: 2px solid #c00; z-index: 1000; display: flex; align-items: center; }
         .ticker-title { background: #c00; padding: 0 20px; height: 100%; display: flex; align-items: center; font-weight: bold; z-index: 2; }
         .ticker-content { flex-grow: 1; overflow: hidden; position: relative; white-space: nowrap; }
         .scrolling-text { display: inline-block; padding-left: 100%; animation: scroll-left 40s linear infinite; color: #fff; font-size: 15px; }
         .news-source { color: #ffcc00; font-weight: bold; margin-left: 5px; }
 
-        /* تصميم الأيقونات على الخريطة */
         .strike-icon { color: #ff3333; font-size: 24px; animation: pulse 1s infinite; text-shadow: 0 0 10px #f00; }
         .plane-icon { color: #00ccff; font-size: 16px; transition: transform 0.5s; text-shadow: 0 0 5px #00ccff; }
 
-        /* ======== تصميم الإنذار الأحمر المركزي ======== */
-        #red-alert-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 0, 0, 0.1); z-index: 9998;
-            display: none; pointer-events: none;
-            animation: flash-bg 0.5s infinite alternate;
-        }
-        #center-alert {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            background: #990000; border: 4px solid #ff3333; border-radius: 10px;
-            color: white; padding: 30px 50px; text-align: center; z-index: 9999;
-            box-shadow: 0 0 50px rgba(255, 0, 0, 0.8); transition: transform 0.3s ease-out;
-            display: flex; flex-direction: column; align-items: center;
-        }
+        #red-alert-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 0, 0, 0.1); z-index: 9998; display: none; pointer-events: none; animation: flash-bg 0.5s infinite alternate; }
+        #center-alert { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: #990000; border: 4px solid #ff3333; border-radius: 10px; color: white; padding: 30px 50px; text-align: center; z-index: 9999; box-shadow: 0 0 50px rgba(255, 0, 0, 0.8); transition: transform 0.3s ease-out; display: flex; flex-direction: column; align-items: center; }
         #center-alert.show { transform: translate(-50%, -50%) scale(1); }
         #center-alert i { font-size: 50px; color: #ffcc00; margin-bottom: 15px; animation: pulse 0.5s infinite; }
         #center-alert h1 { margin: 0; font-size: 35px; letter-spacing: 2px; text-transform: uppercase; }
         #center-alert p { font-size: 18px; margin-top: 10px; font-weight: bold; color: #ffcccc; }
 
-        /* حركات الأنيميشن (Animations) */
         @keyframes scroll-left { 0% { transform: translate(0, 0); } 100% { transform: translate(100%, 0); } }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
@@ -96,9 +74,9 @@
 
     <div id="legend-box">
         <h3><i class="fas fa-satellite-dish"></i> دليل غرفة العمليات</h3>
-        <div class="legend-item"><div class="legend-icon" style="color: #00ccff;"><i class="fas fa-plane"></i></div><span>رصد حي ومباشر لحركة الطيران المدني.</span></div>
-        <div class="legend-item"><div class="legend-icon strike-icon"><i class="fas fa-bullseye"></i></div><span>تحليل ذكي: النقطة تظهر فقط عند تطابق (اسم الموقع + حدث أمني).</span></div>
-        <div class="legend-item"><div class="legend-icon" style="color: #ffcc00;"><i class="fas fa-bolt"></i></div><span>الشريط السفلي: أخبار عاجلة حقيقية تحدث كل 3 دقائق.</span></div>
+        <div class="legend-item"><div class="legend-icon" style="color: #00ccff;"><i class="fas fa-plane"></i></div><span>رصد حي لحركة الطيران المدني.</span></div>
+        <div class="legend-item"><div class="legend-icon strike-icon"><i class="fas fa-bullseye"></i></div><span>النقطة تظهر فقط عند تطابق (اسم الموقع + حدث أمني).</span></div>
+        <div class="legend-item"><div class="legend-icon" style="color: #ffcc00;"><i class="fas fa-bolt"></i></div><span>أخبار عاجلة حقيقية تحدث كل 3 دقائق.</span></div>
     </div>
 
     <div id="news-ticker">
@@ -107,12 +85,10 @@
     </div>
 
     <script>
-        // إعداد الخريطة
         const map = L.map('map', {zoomControl: false}).setView([27.0, 50.0], 5);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
 
-        // قاعدة البيانات الجغرافية
         const locationDB = [
             { name: "السعودية", keywords: ["الرياض", "السعودية", "جدة", "الدمام"], lat: 24.7136, lng: 46.6753 },
             { name: "الإمارات", keywords: ["أبوظبي", "الامارات", "الإمارات", "دبي", "الظفرة"], lat: 24.4539, lng: 54.3773 },
@@ -126,14 +102,16 @@
             { name: "أمريكا", keywords: ["واشنطن", "أمريكا", "البنتاغون", "البيت الأبيض"], lat: 38.8951, lng: -77.0364 }
         ];
 
-        // الكلمات المفتاحية الأمنية
         const actionKeywords = ["قصف", "انفجار", "استهداف", "غارة", "هجوم", "اعتراض", "صاروخ", "مسيرة", "إطلاق نار", "دوي", "تدمير", "مقتل"];
 
         let strikeMarkers = [];
         let flightMarkers = [];
         let alertActive = false;
+        
+        // ذاكرة لحفظ الأخبار المقروءة حتى لا يتكرر الإنذار
+        let processedNews = new Set();
+        let isFirstLoad = true; 
 
-        // دالة تشغيل الإنذار
         function triggerRedAlert(countryName, headline) {
             if(alertActive) return;
             alertActive = true;
@@ -151,12 +129,14 @@
                 alertBox.classList.remove('show');
                 alertOverlay.style.display = 'none';
                 alertActive = false;
-            }, 10000); // يختفي بعد 10 ثواني
+            }, 10000); 
         }
 
-        // دالة جلب الأخبار (مع كاسر الكاش)
         async function fetchLiveNews() {
-            const rssUrl = `https://api.rss2json.com/v1/api.json?rss_url=https://www.skynewsarabia.com/rss&t=${new Date().getTime()}`;
+            // كاسر كاش مزدوج للسيرفر الأصلي والسيرفر الوسيط
+            const targetUrl = encodeURIComponent(`https://www.skynewsarabia.com/rss?nocache=${new Date().getTime()}`);
+            const rssUrl = `https://api.rss2json.com/v1/api.json?rss_url=${targetUrl}`;
+            
             try {
                 const response = await fetch(rssUrl);
                 const data = await response.json();
@@ -165,23 +145,26 @@
                     let newsHtml = "";
                     const articles = data.items.slice(0, 15);
                     
-                    // تنظيف الخريطة من نقاط القصف القديمة
                     strikeMarkers.forEach(m => map.removeLayer(m));
                     strikeMarkers = [];
                     
                     articles.forEach(article => {
                         newsHtml += `<span class="news-source">[عاجل]</span> ${article.title} &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; `;
                         
+                        // التحقق هل الخبر جديد كلياً؟
+                        let isNewArticle = !processedNews.has(article.title);
+                        if(isNewArticle) {
+                            processedNews.add(article.title);
+                        }
+                        
                         let matchedLocation = null;
                         let hasAction = false;
-                        let hasLocation = false; // تعريف المتغير الذي كان مفقوداً
+                        let hasLocation = false;
 
-                        // 1. هل يحتوي الخبر على كلمة قصف/هجوم؟
                         actionKeywords.forEach(action => { 
                             if(article.title.includes(action)) hasAction = true; 
                         });
 
-                        // 2. هل يحتوي الخبر على اسم مدينة/دولة؟
                         locationDB.forEach(loc => {
                             loc.keywords.forEach(keyword => {
                                 if(article.title.includes(keyword)) {
@@ -191,7 +174,6 @@
                             });
                         });
 
-                        // 3. إذا تحقق الشرطان (مكان + حدث أمني)
                         if(hasLocation && hasAction && matchedLocation) {
                             const strikeIcon = L.divIcon({ html: '<i class="fas fa-bullseye"></i>', className: 'strike-icon', iconSize: [24, 24] });
                             const marker = L.marker([matchedLocation.lat, matchedLocation.lng], {icon: strikeIcon})
@@ -200,18 +182,20 @@
                             
                             strikeMarkers.push(marker);
                             
-                            // تشغيل الإنذار وتوجيه الكاميرا
-                            triggerRedAlert(matchedLocation.name, article.title);
-                            map.flyTo([matchedLocation.lat, matchedLocation.lng], 6, {animate: true, duration: 2});
+                            // لا تطلق الإنذار الأحمر في أول تحميل للصفحة، أطلقه فقط للأخبار الجديدة اللحظية
+                            if(isNewArticle && !isFirstLoad) {
+                                triggerRedAlert(matchedLocation.name, article.title);
+                                map.flyTo([matchedLocation.lat, matchedLocation.lng], 6, {animate: true, duration: 2});
+                            }
                         }
                     });
                     
                     document.getElementById('ticker-text').innerHTML = newsHtml;
+                    isFirstLoad = false; // انتهى التحميل الأول
                 }
             } catch (e) { console.error("Error fetching news:", e); }
         }
 
-        // دالة جلب الطيران الحقيقي
         async function fetchRealFlights() {
             const api = 'https://opensky-network.org/api/states/all?lamin=12.0&lomin=34.0&lamax=38.0&lomax=60.0';
             try {
@@ -222,16 +206,17 @@
                 flightMarkers = [];
                 
                 if(data.states) {
-                    const flights = data.states.slice(0, 40); // رسم 40 طائرة كحد أقصى لتخفيف الضغط
+                    const flights = data.states.slice(0, 40);
                     flights.forEach(flight => {
                         const lng = flight[5];
                         const lat = flight[6];
-                        const angle = flight[10] || 0;
+                        const angle = flight[10] || 0; // زاوية الدوران الحقيقية
                         const callsign = flight[1] || "مجهول";
 
                         if(lat && lng) {
+                            // تم تصحيح زاوية الدوران (بدون -45) لتتجه الطائرة بشكل صحيح تماماً
                             const planeIcon = L.divIcon({ 
-                                html: `<div style="transform: rotate(${angle - 45}deg);"><i class="fas fa-plane"></i></div>`, 
+                                html: `<div style="transform: rotate(${angle}deg);"><i class="fas fa-plane"></i></div>`, 
                                 className: 'plane-icon', 
                                 iconSize: [20, 20] 
                             });
@@ -245,13 +230,11 @@
             } catch(e) { console.error("Error fetching flights:", e); }
         }
 
-        // بدء التشغيل
-        setTimeout(fetchLiveNews, 1000); // تأخير ثانية لتفادي مشاكل التحميل
+        setTimeout(fetchLiveNews, 1000);
         fetchRealFlights();
         
-        // المؤقتات الدورية للتحديث التلقائي
-        setInterval(fetchLiveNews, 180000); // تحديث الأخبار كل 3 دقائق
-        setInterval(fetchRealFlights, 60000); // تحديث الطيران كل دقيقة
+        setInterval(fetchLiveNews, 180000); 
+        setInterval(fetchRealFlights, 60000);
 
     </script>
 </body>
